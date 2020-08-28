@@ -9,6 +9,7 @@ from logging.handlers import RotatingFileHandler
 from time import perf_counter, process_time, sleep
 import tracemalloc
 import sqlite3
+from typing import Union
 
 import requests
 from docopt import docopt, DocoptExit, DocoptLanguageError
@@ -232,6 +233,7 @@ def mailgun(subject: str, body: str) -> None:
 
 class Timer(object):
     """
+    Context handler implementation of a stopwatch.
     use like so:
         with Timer() as t:
             sleep(2)
@@ -305,8 +307,11 @@ class Connection:
         logging.info(f"Connection was open for {dt:.6f} s ({self.text})")
 
 
-def apply_schema(schema: Path):
+def apply_schema(schema: Union[str, Path]):
     # TODO support more than one schema per db
+    if isinstance(schema, str):
+        schema = Path(schema)
+    assert isinstance(schema, Path)
     sql = schema.read_text()
     # Neue Tabellen, Indizes und Views können im Fluge angelegt werden
     # Strukturänderungen müssen außerhalb des Tools gelöst erden
@@ -315,7 +320,7 @@ def apply_schema(schema: Path):
         c.cur.executescript(sql)
 
 
-def main(callback, dotfolder: Path = None, mail_subject: str = "Johanna"):
+def main(callback, dotfolder: Union[Path, str] = None, mail_subject: str = "Johanna"):
     global ERROR
     tracemalloc.start()
     pc0 = perf_counter()
