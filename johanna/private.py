@@ -28,9 +28,11 @@ _DOTFOLDER: Path = None
 _INIFILE: Path = None
 _CONFIG: configparser.ConfigParser = None
 _DBFOLDER: Path = None
+_DBNAME: str = None
+_DBPATH: Path = None
 
-def _initialize(dotfolder: Path = None):
-    global _DOTFOLDER, _INIFILE, _CONFIG, _DBFOLDER
+def _initialize(dotfolder: Path = None, dbname: str = None):
+    global _DOTFOLDER, _INIFILE, _CONFIG, _DBFOLDER, _DBNAME, _DBPATH
 
     # ensure dotfolder
     if not dotfolder:
@@ -80,6 +82,10 @@ def _initialize(dotfolder: Path = None):
     else:
         logging.info(f"Creating {_DBFOLDER}...")
         _DBFOLDER.mkdir()
+
+    # database will be implicitely created by apply_schema called from application
+    _DBNAME = dbname if dbname else "johanna.sqlite"
+    _DBPATH = _DBFOLDER / _DBNAME
 
     logging.info("Johanna at your service.")
 
@@ -310,17 +316,24 @@ class Connection:
     Nur als Context Handler verwendbar!
     """
 
-    def __init__(self, text="some activities"):
-        # Application will not have to care for database file name
-        self._db = Path(get("databases", "folder")) / "johanna.sqlite"
-        self.text = text
+    def __init__(self, text: str ="some activities", dbpath: Union[str, Path] = None):
+        # Application will not have to supplay database file name
+        if dbpath:
+            if isinstance(dbpath, str):
+                dbpath = Path(dbpath)
+        else:
+            dbpath = _DBPATH
+        assert isinstance(dbpath, Path)
+        self._dbpath = dbpath
+        self._text = text
 
     def __enter__(self):
         """
         cur und con sind public für den Verwender
         """
         self.t0 = perf_counter()
-        self.conn = sqlite3.connect(self._db)
+        logging.info(f"Connection to {self._dbpath.name}")
+        self.conn = sqlite3.connect(self._dbpath)
         self.cur = self.conn.cursor()
         return self
 
@@ -336,7 +349,7 @@ class Connection:
         dt = perf_counter() - self.t0
         GLOBAL_STAT["connection_sec"] += dt
         GLOBAL_STAT["connection_count"] += 1
-        logging.info(f"Connection was open for {dt:.6f} s ({self.text})")
+        logging.info(f"Connection to {self._dbpath.name} was open for {dt:.6f} s ({self._text})")
 
 
 def apply_schema(schema: Union[str, Path]):
@@ -352,12 +365,16 @@ def apply_schema(schema: Union[str, Path]):
         c.cur.executescript(sql)
 
 
-def main(callback, dotfolder: Union[Path, str] = None, mail_subject: str = "Johanna"):
+def main(callback,
+         dotfolder: Union[Path, str] = None,
+         mail_subject: str = "Johanna",
+         dbname: str = "johanna.sqlite"  # set default for Connection context handler
+         ):
     global ERROR
     tracemalloc.start()
     pc0 = perf_counter()
     pt0 = process_time()
-    _initialize(dotfolder=dotfolder)
+    _initialize(dotfolder=dotfolder, dbname=dbname)
     try:
         try:
             callback()
