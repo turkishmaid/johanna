@@ -193,6 +193,7 @@ def flag_as_error() -> None:
         a) the prefix will be "ERROR - ", not "SUCCESS - "
         b) the full log of the current run will be sent, rather than only the last few lines
     """
+    global ERROR
     ERROR = True
 
 
