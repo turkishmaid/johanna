@@ -8,4 +8,16 @@ setup(name='johanna',
       author_email='turkishmaid@example.com',
       license='MIT',
       packages=['johanna'],
+      install_requires=[
+            'requests',
+            'docopt'
+      ],
+      classifiers=[
+            'Development Status :: 3 - Alpha',
+            'License :: OSI Approved :: MIT License',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
+            'Intended Audience :: Developers',
+            'Topic :: Utilities',
+      ],
       zip_safe=False)
