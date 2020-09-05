@@ -1,11 +1,19 @@
 from setuptools import setup
 
+"""
+Primer:
+      pip install -e .  # from package root, install via symlinks (one-time)
+      # change version here
+      python setup.py sdist  # create versioned dist/*.tar.gz
+      python3 -m twine upload dist/*  # choose the newest
+"""
+
 setup(name='johanna',
-      version='v0.1.0',
+      version='0.2.0',
       description='Sweet tiny app framework for Jenkins driven background apps',
       url='https://github.com/turkishmaid/johanna',
       author='Sara Ziner',
-      author_email='turkishmaid@example.com',
+      author_email='turkishmaid@example.com', # :P
       license='MIT',
       packages=['johanna'],
       install_requires=[
