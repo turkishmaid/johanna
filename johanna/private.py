@@ -31,7 +31,7 @@ _DBFOLDER: Path = None
 _DBNAME: str = None
 _DBPATH: Path = None
 
-def _initialize(dotfolder: Path = None, dbname: str = None):
+def _initialize(dotfolder: Path = None, dbname: str = None, is_interactive: bool = False):
     global _DOTFOLDER, _INIFILE, _CONFIG, _DBFOLDER, _DBNAME, _DBPATH
 
     # ensure dotfolder
@@ -48,7 +48,12 @@ def _initialize(dotfolder: Path = None, dbname: str = None):
 
     # get as most messages in log as possible
     # TODO make logging configurable via .ini
-    _init_logging(collective=True, console=True, process=True)
+    if is_interactive:
+        # good for Jupyter Notebooks etc.
+        _init_logging(collective=False, console=True, process=False)
+    else:
+        # good for background jobs
+        _init_logging(collective=True, console=True, process=True)
 
     # create init-file in dotfolder
     _CONFIG = configparser.ConfigParser()
@@ -413,7 +418,7 @@ def main(callback,
     Note: the name of the .ini-file is NOT configurable and will always be
         <dotfolder>/johanna.ini
 
-    :param callback: The main code for execution. Needs no try's to b safe.
+    :param callback: The main code for execution. Needs no try's to be safe.
     :param dotfolder: A Path or str for pointing to the  working folder holding
         the .ini file, the log files, and (by default) the databases. Will be
         taken from $JOHANNA (or $HOME/.johanna as a fallback) if not specified.
@@ -424,6 +429,13 @@ def main(callback,
         new Connection(). Do not overwrite the default when only one database is
         used.
     """
+    if callback == None:
+        # interactive mode: All johanna tooling works, but no log files are written
+        # and no mail is sent. This is cool when you want to use jahanna-enabled
+        # code e.g. from Jupyter notebboks.
+        _initialize(dotfolder=dotfolder, dbname=dbname, is_interactive=True)
+        return
+    # background mode: with
     global ERROR
     tracemalloc.start()
     pc0 = perf_counter()
