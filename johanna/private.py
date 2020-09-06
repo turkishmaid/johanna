@@ -83,20 +83,32 @@ def _initialize(dotfolder: Path = None, dbname: str = None):
         logging.info(f"Creating {_DBFOLDER}...")
         _DBFOLDER.mkdir()
 
-    # database will be implicitely created by apply_schema called from application
+    # database will be implicitly created by apply_schema called from application
     _DBNAME = dbname if dbname else "johanna.sqlite"
     _DBPATH = _DBFOLDER / _DBNAME
 
     logging.info("Johanna at your service.")
 
 
-def get(section, key, default=None):
+def get(section, key, default: str=None) -> str:
+    """
+    Read configuration file.
+
+    :param section: Section in <dotfolder>/johanna.ini
+    :param key: Key within that section.
+    :param default: Default value if secion or key is not available in
+        <dotfolder>/johanna.ini
+    :return: Configured value or the default, always returnred as a str.
+    """
     if not _CONFIG:
         raise RuntimeError("johanna.get() before initialization")
     if section in _CONFIG:
         if key in _CONFIG[section]:
             return _CONFIG[section][key]
-    return default
+    if default == None:
+        return None
+    else:
+        return str(default)
 
 
 # set the following to true if mail should get an "[FAILURE] - " prefix
@@ -173,6 +185,7 @@ def _init_logging(collective: bool = False, console: bool = False, process: bool
 def _tail(fnam: Path, circa: int = 1500) -> str:
     """
     Quickly get the last few lines of a possibly big log file.
+
     :param fnam: Path or str to the file
     :param circa: Specify approx. size of tail (from end of file)
     :return: last few lines of the file
@@ -195,12 +208,13 @@ def _tail(fnam: Path, circa: int = 1500) -> str:
 
 def flag_as_error() -> None:
     """
-    When sending the log via mailgun
+    When sending the log via mailgun later
         a) the prefix will be "ERROR - ", not "SUCCESS - "
         b) the full log of the current run will be sent, rather than only the last few lines
     """
     global ERROR
     ERROR = True
+    logging.error("going to ERROR state")
 
 
 def _shoot_mail(subject="from Johanna with love"):
@@ -231,6 +245,14 @@ def _shoot_mail(subject="from Johanna with love"):
 
 
 def mailgun(subject: str, body: str) -> None:
+    """
+    Send mail via the mailgun accoutn configured in the [mailgun] desction of
+    <dotfolder>/johanna.ini
+
+    :param subject: The Subject for the mail.
+    :param body: The body of the mail.
+    :return:
+    """
     url = get("mailgun", "url")
     auth_key = get("mailgun", "auth-key")
     from_ = get("mailgun", "from")
@@ -301,8 +323,7 @@ def collect_stat(collector: str, value_to_add: Union[int, float]) -> None:
     """
     Maintain global statistics values that are logged at the end of the current run.
     :param collector: Name of the collector
-    :param value_to_add: Value to aggregate into the statistics
-    :return:
+    :param value_to_add: Value to aggregate into the statistics, int or flaot
     """
     # TODO add memory and runtime info here?
     if collector in [ "connection_sec", ]:
@@ -312,11 +333,20 @@ def collect_stat(collector: str, value_to_add: Union[int, float]) -> None:
 
 class Connection:
     """
-    Manages SQLite connection and cursor to avoid caring for the name in many routines.
-    Nur als Context Handler verwendbar!
+    Manages SQLite connection and cursor to avoid caring for the name in many
+    routines. Only usable as a Context Handler so far.
+        with Connection() as c:
+            c.cur.execute("...")
+            c.commit()
     """
 
     def __init__(self, text: str ="some activities", dbpath: Union[str, Path] = None):
+        """
+        :param text: this text will show up in the logs to explain what was
+            done in the scope of this Connection()
+        :param dbpath: name of the database file to use. Is defaulted from
+            the respective parameter of main()
+        """
         # Application will not have to supplay database file name
         if dbpath:
             if isinstance(dbpath, str):
@@ -353,15 +383,23 @@ class Connection:
 
 
 def apply_schema(schema: Union[str, Path]):
+    """
+    Applies a schema (i.e. a set of create table and create index statements,
+    all with if exists, please) to the defualt database for a Connection().
+    This is intended to set up the working database for the program.
+    You can add new tables and indexes on the fly, but structural changes have
+    to be dealt with individually, and johanna does not provide support for
+    such.
+
+    :param schema: Path or str pointing to a SQL file.
+    """
     # TODO support more than one schema per db
     if isinstance(schema, str):
         schema = Path(schema)
     assert isinstance(schema, Path)
     sql = schema.read_text()
-    # Neue Tabellen, Indizes und Views können im Fluge angelegt werden
-    # Strukturänderungen müssen außerhalb des Tools gelöst erden
     logging.info(f"Applying {schema}")
-    with Connection(f"apply {schema}") as c:
+    with Connection(text=f"apply {schema}") as c:
         c.cur.executescript(sql)
 
 
@@ -369,7 +407,23 @@ def main(callback,
          dotfolder: Union[Path, str] = None,
          mail_subject: str = "Johanna",
          dbname: str = "johanna.sqlite"  # set default for Connection context handler
-         ):
+         ) -> None:
+    """
+    Execute the semntic function of the program.
+    Note: the name of the .ini-file is NOT configurable and will always be
+        <dotfolder>/johanna.ini
+
+    :param callback: The main code for execution. Needs no try's to b safe.
+    :param dotfolder: A Path or str for pointing to the  working folder holding
+        the .ini file, the log files, and (by default) the databases. Will be
+        taken from $JOHANNA (or $HOME/.johanna as a fallback) if not specified.
+        You want to configure this.
+    :param mail_subject: dDscriptive part of the mail subject for the SUCCESS
+        or ERROR mail being sent after the program execution is finished.
+    :param dbname: Name of the database file that will be used by default for e
+        new Connection(). Do not overwrite the default when only one database is
+        used.
+    """
     global ERROR
     tracemalloc.start()
     pc0 = perf_counter()
