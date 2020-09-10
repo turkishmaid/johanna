@@ -13,7 +13,7 @@ from pathlib import Path
 import configparser
 import logging
 from logging.handlers import RotatingFileHandler
-from time import perf_counter, process_time, sleep
+from time import perf_counter, process_time, sleep as sleep_
 import tracemalloc
 import sqlite3
 from typing import Union
@@ -308,6 +308,15 @@ class Timer(object):
         else:
             dt = perf_counter() - self.start
             return dt if raw else "[%0.3f s]" % dt
+
+
+def sleep(seconds: float = 1.0) -> None:
+    if seconds <= 0.0:
+        seconds = 1.0
+    if seconds > 100.0:
+        seconds = 100.0
+    logging.info(f"Sleeping for {seconds:0.1f} sec ...")
+    sleep_(seconds)
 
 
 def ls(path: Path) -> None:
