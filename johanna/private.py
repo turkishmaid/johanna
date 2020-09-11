@@ -243,7 +243,8 @@ def _shoot_mail(subject="from Johanna with love"):
     else:
         body = _tail(_FILE_PATH)
 
-    # logger.addHandler(_FILE_HANDLER) TODO not throw away but append after reading the contents
+    # TODO not throw away but append after reading the contents
+    # logger.addHandler(_FILE_HANDLER)
 
     subject = ( "ERROR - " if ERROR else "SUCCESS - " ) + subject
     mailgun(subject, body)
@@ -251,7 +252,7 @@ def _shoot_mail(subject="from Johanna with love"):
 
 def mailgun(subject: str, body: str) -> None:
     """
-    Send mail via the mailgun accoutn configured in the [mailgun] desction of
+    Send mail via the mailgun account configured in the [mailgun] section of
     <dotfolder>/johanna.ini
 
     :param subject: The Subject for the mail.
@@ -423,16 +424,16 @@ def main(callback,
          dbname: str = "johanna.sqlite"  # set default for Connection context handler
          ) -> None:
     """
-    Execute the semntic function of the program.
+    Execute the semantic function of the program.
     Note: the name of the .ini-file is NOT configurable and will always be
         <dotfolder>/johanna.ini
 
     :param callback: The main code for execution. Needs no try's to be safe.
-    :param dotfolder: A Path or str for pointing to the  working folder holding
+    :param dotfolder: A Path or str pointing to the  working folder holding
         the .ini file, the log files, and (by default) the databases. Will be
         taken from $JOHANNA (or $HOME/.johanna as a fallback) if not specified.
         You want to configure this.
-    :param mail_subject: dDscriptive part of the mail subject for the SUCCESS
+    :param mail_subject: Descriptive part of the mail subject for the SUCCESS
         or ERROR mail being sent after the program execution is finished.
     :param dbname: Name of the database file that will be used by default for e
         new Connection(). Do not overwrite the default when only one database is
