@@ -9,7 +9,7 @@ Primer:
 """
 
 setup(name='johanna',
-      version='0.4.1',
+      version='0.4.2',
       description='Sweet tiny app framework for Jenkins driven background apps',
       url='https://github.com/turkishmaid/johanna',
       author='Sara Ziner',

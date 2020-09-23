@@ -474,3 +474,21 @@ def main(callback,
     logging.info("Ciao.")
     print()
     print()
+
+
+def interactive(
+         dotfolder: Union[Path, str] = None,
+         dbname: str = "johanna.sqlite"  # set default for Connection context handler
+         ) -> None:
+    """
+    Convenience function to avoid johanna.main(None,...) in Jupyter notebooks.
+
+    :param dotfolder: A Path or str pointing to the  working folder holding
+        the .ini file, the log files, and (by default) the databases. Will be
+        taken from $JOHANNA (or $HOME/.johanna as a fallback) if not specified.
+        You want to configure this.
+    :param dbname: Name of the database file that will be used by default for e
+        new Connection(). Do not overwrite the default when only one database is
+        used.
+    """
+    _initialize(dotfolder=dotfolder, dbname=dbname, is_interactive=True)

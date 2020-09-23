@@ -11,7 +11,7 @@ Created: 06.09.20
 import johanna
 
 if __name__ == "__main__":
-    johanna.main(None, dbname="hurz.sqlite")
+    johanna.interactive(dbname="hurz.sqlite")
     johanna.apply_schema("./schema.sql")
     with johanna.Connection("Charlotte") as c:
         c.cur.execute("insert or ignore into kvpairs(k, v) values (1, 'eins')")
