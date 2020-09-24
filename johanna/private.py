@@ -23,6 +23,22 @@ from collections import defaultdict
 import requests
 from docopt import docopt, DocoptExit, DocoptLanguageError
 
+_HOME = None
+
+def _safe(path: Union[Path, str]) -> str:
+    """
+    Support logging without exposing private information.
+    Thsi implementtion is a hack, hence the hacky name.
+
+    :param path: a Path or str
+    :return: str with $HOME replaced by ~
+    """
+    # TODO quick solution only, replace by suitable logging exit later
+    global _HOME
+    if not _HOME:
+        _HOME = os.environ["HOME"]
+    return str(path).replace(_HOME, "~")
+
 
 _DOTFOLDER: Path = None
 _INIFILE: Path = None
@@ -33,6 +49,7 @@ _DBPATH: Path = None
 
 def _initialize(dotfolder: Path = None, dbname: str = None, is_interactive: bool = False):
     global _DOTFOLDER, _INIFILE, _CONFIG, _DBFOLDER, _DBNAME, _DBPATH
+    # DONE accept ~/.folder notation to avoid import os in notebooks
 
     # ensure dotfolder
     if not dotfolder:
@@ -40,6 +57,10 @@ def _initialize(dotfolder: Path = None, dbname: str = None, is_interactive: bool
             dotfolder = Path(os.environ["JOHANNA"])
         else:  # Fallback
             dotfolder = Path(os.environ["HOME"]) / ".johanna"
+    if isinstance(dotfolder, str) and dotfolder.startswith("~/"):
+        dotfolder = Path(os.environ["HOME"]) / dotfolder[2:]
+    if not isinstance(dotfolder, Path):
+        dotfolder = Path(dotfolder)
     if not dotfolder.exists():
         dotfolder.mkdir()
     _DOTFOLDER = dotfolder
@@ -58,9 +79,9 @@ def _initialize(dotfolder: Path = None, dbname: str = None, is_interactive: bool
     # create init-file in dotfolder
     _CONFIG = configparser.ConfigParser()
     if _INIFILE.exists():
-        logging.info(f"Configuration file: {_INIFILE} OK")
+        logging.info(f"Configuration file: {_safe(_INIFILE)} OK")
     else:
-        logging.info(f"Configuration file: {_INIFILE} will be created")
+        logging.info(f"Configuration file: {_safe(_INIFILE)} will be created")
         _INIFILE.touch()
     _CONFIG.read(_INIFILE)
 
@@ -76,16 +97,16 @@ def _initialize(dotfolder: Path = None, dbname: str = None, is_interactive: bool
     if "folder" in _CONFIG["databases"]:
         _DBFOLDER = Path(_CONFIG["databases"]["folder"])
     else:
-        logging.info(f"Defaulting database folder to {_DOTFOLDER}")
+        logging.info(f"Defaulting database folder to {_safe(_DOTFOLDER)}")
         _DBFOLDER = _DOTFOLDER
         _CONFIG["databases"]["folder"] = str(_DOTFOLDER)
         with open(_INIFILE, "w") as fp:
             _CONFIG.write(fp)
-    logging.info(f"Databases go to {_DBFOLDER}")
+    logging.info(f"Databases go to {_safe(_DBFOLDER)}")
     if _DBFOLDER.exists():
         logging.info("Using existing folder")
     else:
-        logging.info(f"Creating {_DBFOLDER}...")
+        logging.info(f"Creating {_safe(_DBFOLDER)}...")
         _DBFOLDER.mkdir()
 
     # database will be implicitly created by apply_schema called from application
@@ -141,8 +162,9 @@ def _init_logging(collective: bool = False, console: bool = False, process: bool
     :param process: write to a logfile unique to this process
     :return: nothing. However, a first log message is emitted.
     """
-    # TODO run this on import?
+    # DONE run this on import? -> no, decision whether cron or interactive is up to the caller
     # DONE on/off for log handlers via parameter to support e.g. notebooks that do not do runwise logging
+    # TODO hide username from logs
 
     global _ROTATING_FILE_PATH, _ROTATING_FILE_HANDLER, _STDOUT_HANDLER, _FILE_PATH, _FILE_HANDLER
 
@@ -233,7 +255,7 @@ def _shoot_mail(subject="from Johanna with love"):
     logger = logging.getLogger()
     logger.removeHandler(_FILE_HANDLER)
     _FILE_HANDLER = None
-    logging.info(f'closed {_FILE_PATH}')
+    logging.info(f'closed {_safe(_FILE_PATH)}')
 
     # send file contents via email
     # DONE bei SUCCESS nur eine kleine Statistik senden, nur bei ERROR das ganze Log
@@ -328,7 +350,7 @@ def ls(path: Path) -> None:
     :param path: das zu listende Verzeichnis
     """
     console = os.popen(f'cd {path}; ls -latr').read()
-    logging.info(f"ls -la {path}:\n" + console)
+    logging.info(f"ls -la {_safe(path)}:\n" + console)
 
 
 # johanna will modify this directly only
@@ -377,7 +399,7 @@ class Connection:
         cur und con sind public für den Verwender
         """
         self.t0 = perf_counter()
-        logging.info(f"Connection to {self._dbpath.name}")
+        logging.info(f"Connection to {_safe(self._dbpath.name)} for {self._text}")
         self.conn = sqlite3.connect(self._dbpath)
         self.cur = self.conn.cursor()
         return self
@@ -394,13 +416,13 @@ class Connection:
         dt = perf_counter() - self.t0
         GLOBAL_STAT["connection_sec"] += dt
         GLOBAL_STAT["connection_count"] += 1
-        logging.info(f"Connection to {self._dbpath.name} was open for {dt:.6f} s ({self._text})")
+        logging.info(f"Connection to {_safe(self._dbpath.name)} was open for {dt:.6f} s ({self._text})")
 
 
 def apply_schema(schema: Union[str, Path]):
     """
     Applies a schema (i.e. a set of create table and create index statements,
-    all with if exists, please) to the defualt database for a Connection().
+    all with if exists, please) to the default database for a Connection().
     This is intended to set up the working database for the program.
     You can add new tables and indexes on the fly, but structural changes have
     to be dealt with individually, and johanna does not provide support for
@@ -413,8 +435,8 @@ def apply_schema(schema: Union[str, Path]):
         schema = Path(schema)
     assert isinstance(schema, Path)
     sql = schema.read_text()
-    logging.info(f"Applying {schema}")
-    with Connection(text=f"apply {schema}") as c:
+    logging.info(f"Applying {_safe(schema)}")
+    with Connection(text=f"apply {_safe(schema)}") as c:
         c.cur.executescript(sql)
 
 
@@ -491,4 +513,9 @@ def interactive(
         new Connection(). Do not overwrite the default when only one database is
         used.
     """
-    _initialize(dotfolder=dotfolder, dbname=dbname, is_interactive=True)
+    # DONE harden about double execution (easily happens in notebooks)
+    if not _DOTFOLDER:
+        _initialize(dotfolder=dotfolder, dbname=dbname, is_interactive=True)
+    else:
+        logging.info("johanna: already intialized")
+

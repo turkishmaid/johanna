@@ -3,13 +3,15 @@ from setuptools import setup
 """
 Primer:
       pip install -e .  # from package root, install via symlinks (one-time)
-      # change version here
+      # change version in this file
       python setup.py sdist  # create versioned dist/*.tar.gz
       python3 -m twine upload dist/*  # choose the newest
+      # commit and push latest
+      # create version in GitHub
 """
 
 setup(name='johanna',
-      version='0.4.2',
+      version='0.5.0',
       description='Sweet tiny app framework for Jenkins driven background apps',
       url='https://github.com/turkishmaid/johanna',
       author='Sara Ziner',

@@ -12,8 +12,10 @@ import johanna
 
 if __name__ == "__main__":
     johanna.interactive(dbname="hurz.sqlite")
-    johanna.apply_schema("./schema.sql")
+    # johanna.apply_schema("./schema.sql")
     with johanna.Connection("Charlotte") as c:
-        c.cur.execute("insert or ignore into kvpairs(k, v) values (1, 'eins')")
-        c.commit()
+        # need to run charlotte.py
+        c.cur.execute("select * from kvpairs")
+        for row in c.cur:
+            print(row)
     johanna.flag_as_error()
