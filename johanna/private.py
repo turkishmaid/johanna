@@ -379,12 +379,11 @@ class Connection:
     conn: sqlite3.Connection
     cur: sqlite3.Cursor
 
-    def __init__(self, text: str ="some activities", dbpath: Union[str, Path] = None):
+    def __init__(self, text: str ="some activities", dbpath: Union[str, Path] = None, quiet: bool = False):
         """
-        :param text: this text will show up in the logs to explain what was
-            done in the scope of this Connection()
-        :param dbpath: name of the database file to use. Is defaulted from
-            the respective parameter of main()
+        :param text: this text will show up in the logs to explain what was done in the scope of this Connection()
+        :param dbpath: name of the database file to use. Is defaulted from the respective parameter of main()
+        :param quiet: surpress log output
         """
         # Application will not have to supplay database file name
         if dbpath:
@@ -395,13 +394,15 @@ class Connection:
         assert isinstance(dbpath, Path)
         self._dbpath = dbpath
         self._text = text
+        self.quiet = quiet
 
     def __enter__(self):
         """
         cur und con sind public für den Verwender
         """
         self.t0 = perf_counter()
-        logging.info(f"Connection to {_safe(self._dbpath.name)} for {self._text}")
+        if not self.quiet:
+            logging.info(f"Connection to {_safe(self._dbpath.name)} for {self._text}")
         self.conn = sqlite3.connect(self._dbpath)
         self.cur = self.conn.cursor()
         return self
@@ -418,7 +419,8 @@ class Connection:
         dt = perf_counter() - self.t0
         GLOBAL_STAT["connection_sec"] += dt
         GLOBAL_STAT["connection_count"] += 1
-        logging.info(f"Connection to {_safe(self._dbpath.name)} was open for {dt:.6f} s ({self._text})")
+        if not self.quiet:
+            logging.info(f"Connection to {_safe(self._dbpath.name)} was open for {dt:.6f} s ({self._text})")
 
 
 def apply_schema(schema: Union[str, Path]):
