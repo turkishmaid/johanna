@@ -376,6 +376,8 @@ class Connection:
             c.cur.execute("...")
             c.commit()
     """
+    conn: sqlite3.Connection
+    cur: sqlite3.Cursor
 
     def __init__(self, text: str ="some activities", dbpath: Union[str, Path] = None):
         """

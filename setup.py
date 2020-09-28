@@ -11,7 +11,7 @@ Primer:
 """
 
 setup(name='johanna',
-      version='0.5.0',
+      version='0.5.1',
       description='Sweet tiny app framework for Jenkins driven background apps',
       url='https://github.com/turkishmaid/johanna',
       author='Sara Ziner',
