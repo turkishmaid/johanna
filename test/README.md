@@ -1,6 +1,6 @@
 # Tests
 
-Maybe it's difficult to test, maybe I am to unexperienced 
+Maybe it's difficult to test, maybe I am too unexperienced 
 to write good tests, maybe I'm just to lazy. 
 
 However, here are two little programs you might want to use
